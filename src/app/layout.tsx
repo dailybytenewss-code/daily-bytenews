@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 
@@ -55,6 +56,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
