@@ -6,12 +6,10 @@ import AppLogo from '@/components/ui/AppLogo';
 import Icon from '@/components/ui/AppIcon';
 
 const navLinks = [
-  { label: 'Home', href: '/homepage' },
+  { label: 'Home', href: '/' },
   { label: 'AI & Tech', href: '/category?cat=ai-tech' },
   { label: 'Business', href: '/category?cat=business' },
   { label: 'Trending', href: '/category?cat=trending' },
-  { label: 'Explainers', href: '/category?cat=explainers' },
-  { label: 'Opinion', href: '/category?cat=opinion' },
 ];
 
 export default function Header() {
@@ -65,7 +63,7 @@ export default function Header() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/homepage?search=${encodeURIComponent(searchQuery.trim())}`;
+      window.location.href = `/?search=${encodeURIComponent(searchQuery.trim())}`;
       setSearchOpen(false);
       setSearchQuery('');
     }
@@ -78,25 +76,19 @@ export default function Header() {
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
           <span className="text-xs text-gray-400 font-medium">{currentDate}</span>
           <div className="flex items-center gap-4">
-            <Link href="/homepage" className="text-xs text-gray-300 hover:text-white transition-colors font-medium">
+            <Link href="/" className="text-xs text-gray-300 hover:text-white transition-colors font-medium">
               Subscribe to Newsletter
             </Link>
             <div className="flex items-center gap-2 ml-2">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X"
+              <a href="https://twitter.com/daily_bytenews" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X"
                 className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+              <a href="https://instagram.com/daily_bytenews" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
                 className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
                 <Icon name="CameraIcon" size={14} />
-              </a>
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" aria-label="Telegram"
-                className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z" />
-                </svg>
               </a>
             </div>
           </div>
@@ -113,7 +105,7 @@ export default function Header() {
         <div className="max-w-[1200px] mx-auto px-4">
           <div className={`flex items-center justify-between transition-all duration-300 ${scrolled ? 'h-14' : 'h-16'}`}>
             {/* Logo */}
-            <Link href="/homepage" className="flex items-center gap-2 flex-shrink-0">
+            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
               <AppLogo size={scrolled ? 32 : 36} />
               <div className="flex flex-col">
                 <span className="font-display font-800 text-lg leading-none tracking-tight" style={{ letterSpacing: '-0.03em' }}>
@@ -144,7 +136,6 @@ export default function Header() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2">
-              {/* Search */}
               <div className="relative flex items-center">
                 {searchOpen ? (
                   <form onSubmit={handleSearchSubmit} className="flex items-center">
@@ -175,7 +166,6 @@ export default function Header() {
                 )}
               </div>
 
-              {/* Dark Mode Toggle */}
               <button
                 onClick={toggleDarkMode}
                 className="p-2 text-muted hover:text-primary transition-colors rounded-md hover:bg-primary/5"
@@ -184,7 +174,6 @@ export default function Header() {
                 {darkMode ? <Icon name="SunIcon" size={20} /> : <Icon name="MoonIcon" size={20} />}
               </button>
 
-              {/* Mobile Hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 text-muted hover:text-foreground transition-colors"
