@@ -6,11 +6,11 @@ import HomepageContent from './components/HomepageContent';
 export const metadata: Metadata = {
   title: 'DailyByteNews — Tech. Trends. Now.',
   description: 'Breaking AI, technology, and business news for the modern Indian reader. Fast, trustworthy, ad-minimal.',
-  alternates: { canonical: 'https://dailybytenews.in/homepage' },
+  alternates: { canonical: 'https://dailybytenews.in' },
   openGraph: {
     title: 'DailyByteNews — Tech. Trends. Now.',
     description: 'Breaking AI, technology, and business news for the modern Indian reader.',
-    url: 'https://dailybytenews.in/homepage',
+    url: 'https://dailybytenews.in',
     type: 'website',
   },
 };
