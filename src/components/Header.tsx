@@ -76,10 +76,7 @@ export default function Header() {
         <div className="max-w-[1200px] mx-auto flex items-center justify-between">
           <span className="text-xs text-gray-400 font-medium">{currentDate}</span>
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-xs text-gray-300 hover:text-white transition-colors font-medium">
-              Subscribe to Newsletter
-            </Link>
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-2">
               <a href="https://twitter.com/daily_bytenews" target="_blank" rel="noopener noreferrer" aria-label="Twitter/X"
                 className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

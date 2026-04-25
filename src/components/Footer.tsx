@@ -1,21 +1,8 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
 
 export default function Footer() {
-  const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email.trim()) {
-      setSubscribed(true);
-      setEmail('');
-    }
-  };
-
   return (
     <footer className="bg-dark-navy text-white">
       <div className="max-w-[1200px] mx-auto px-4 pt-16 pb-8">
@@ -87,34 +74,19 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* Contact */}
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-5">Daily Newsletter</h4>
-            <p className="text-sm text-gray-400 mb-4 leading-relaxed">
-              Get the top 5 tech stories delivered to your inbox every morning.
-            </p>
-            {subscribed ? (
-              <div className="text-sm font-semibold text-green-400 py-2">✓ You're subscribed!</div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="your@email.com"
-                  className="px-3 py-2.5 text-sm rounded-lg bg-white/10 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-primary transition-all"
-                  style={{ '--tw-ring-color': '#1A6DD2' } as React.CSSProperties}
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 text-sm font-bold rounded-lg text-white transition-all hover:opacity-90 min-h-[44px]"
-                  style={{ backgroundColor: '#1A6DD2' }}
-                >
-                  Subscribe Free
-                </button>
-              </form>
-            )}
+            <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-5">Get In Touch</h4>
+            <ul className="space-y-3">
+              <li>
+                <a href="mailto:contact@dailybytenews.in" className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2">
+                  contact@dailybytenews.in
+                </a>
+              </li>
+              <li className="text-sm text-gray-400">
+                For news tips, partnerships, or advertising inquiries, reach us at the email above.
+              </li>
+            </ul>
           </div>
         </div>
 
