@@ -45,11 +45,6 @@ export default function CategoryPageContent({ category }: CategoryPageContentPro
       {/* Category Header */}
       <div className="bg-card border-b border-border">
         <div className="max-w-[1200px] mx-auto px-4 py-10">
-          <nav className="flex items-center gap-2 text-sm text-muted mb-4" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
-            <span>/</span>
-            <span className="text-foreground font-medium">{category.name}</span>
-          </nav>
           <div className="flex items-start gap-4">
             <div className="w-1.5 h-12 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: accentColor }} />
             <div>

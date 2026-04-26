@@ -33,7 +33,7 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
         <Header />
         <div className="max-w-[720px] mx-auto px-4 py-24 text-center">
           <h1 className="font-display text-3xl font-bold text-foreground mb-4">Article not found</h1>
-          <Link href="/homepage" className="text-primary font-semibold hover:underline">← Back to homepage</Link>
+          <Link href="/" className="text-primary font-semibold hover:underline">← Back to homepage</Link>
         </div>
         <Footer />
       </div>
@@ -62,17 +62,6 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
       <Header />
       <main>
         <div className="max-w-[1200px] mx-auto px-4 pt-8 pb-16">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-muted mb-6 flex-wrap" aria-label="Breadcrumb">
-            <Link href="/homepage" className="hover:text-primary transition-colors">Home</Link>
-            <span>/</span>
-            <Link href={`/category?cat=${article.categorySlug}`} className="hover:text-primary transition-colors capitalize">
-              {article.category}
-            </Link>
-            <span>/</span>
-            <span className="text-foreground line-clamp-1 max-w-xs">{article.title}</span>
-          </nav>
-
           <div className="flex flex-col lg:flex-row gap-10">
             {/* Article Content */}
             <article className="flex-1 min-w-0 max-w-[720px]">
