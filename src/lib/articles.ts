@@ -277,5 +277,4 @@ export const categories = [
 { name: 'AI & Tech', slug: 'ai-tech', description: 'Artificial intelligence, machine learning, developer tools, and the technology shaping tomorrow.', color: 'blue' as const },
 { name: 'Business & Markets', slug: 'business', description: 'Startup funding, IPOs, market moves, and the business side of the tech industry.', color: 'green' as const },
 { name: 'Trending', slug: 'trending', description: 'The stories everyone is talking about — viral, impactful, and worth your attention.', color: 'amber' as const },
-{ name: 'Explainers', slug: 'explainers', description: 'Complex topics made clear. Deep dives into the ideas and technologies that matter.', color: 'blue' as const },
-{ name: 'Opinion', slug: 'opinion', description: 'Perspectives from technologists, entrepreneurs, and analysts on where tech is headed.', color: 'amber' as const }];
+];

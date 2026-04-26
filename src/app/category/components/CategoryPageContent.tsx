@@ -46,7 +46,7 @@ export default function CategoryPageContent({ category }: CategoryPageContentPro
       <div className="bg-card border-b border-border">
         <div className="max-w-[1200px] mx-auto px-4 py-10">
           <nav className="flex items-center gap-2 text-sm text-muted mb-4" aria-label="Breadcrumb">
-            <Link href="/homepage" className="hover:text-primary transition-colors">Home</Link>
+            <Link href="/" className="hover:text-primary transition-colors">Home</Link>
             <span>/</span>
             <span className="text-foreground font-medium">{category.name}</span>
           </nav>
@@ -135,7 +135,7 @@ export default function CategoryPageContent({ category }: CategoryPageContentPro
                 ) : (
                   <div className="mt-8 text-center py-6 border-t border-border">
                     <p className="text-sm text-muted">You've reached the end of {category.name} articles.</p>
-                    <Link href="/homepage" className="text-sm font-semibold text-primary mt-2 inline-block hover:opacity-80">
+                    <Link href="/" className="text-sm font-semibold text-primary mt-2 inline-block hover:opacity-80">
                       ← Back to Homepage
                     </Link>
                   </div>
@@ -151,7 +151,7 @@ export default function CategoryPageContent({ category }: CategoryPageContentPro
                 </div>
                 <h3 className="font-display text-lg font-bold text-foreground mb-2">No articles yet</h3>
                 <p className="text-sm text-muted mb-6">We're working on stories in this category. Check back soon.</p>
-                <Link href="/homepage" className="px-6 py-2.5 rounded-lg text-sm font-bold text-white" style={{ backgroundColor: '#1A6DD2' }}>
+                <Link href="/" className="px-6 py-2.5 rounded-lg text-sm font-bold text-white" style={{ backgroundColor: '#1A6DD2' }}>
                   Browse All Stories
                 </Link>
               </div>
