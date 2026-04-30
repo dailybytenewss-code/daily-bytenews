@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { getTrendingArticles } from '@/lib/articles';
+import { getTrendingArticles as getFallbackTrendingArticles, type Article } from '@/lib/articles';
 
 const categoryColorMap: Record<string, string> = {
   blue: 'category-badge-blue',
@@ -12,8 +12,12 @@ const categoryColorMap: Record<string, string> = {
   green: 'category-badge-green',
 };
 
-export default function Sidebar() {
-  const trending = getTrendingArticles();
+interface SidebarProps {
+  trendingArticles?: Article[];
+}
+
+export default function Sidebar({ trendingArticles }: SidebarProps) {
+  const trending = trendingArticles?.length ? trendingArticles : getFallbackTrendingArticles();
 
   return (
     <aside className="w-full space-y-6">
@@ -21,7 +25,10 @@ export default function Sidebar() {
       <div className="bg-card rounded-xl border border-border p-5">
         <div className="section-header mb-4">
           <div className="section-header-accent" />
-          <h2 className="font-display text-base font-bold text-foreground" style={{ letterSpacing: '-0.02em' }}>
+          <h2
+            className="font-display text-base font-bold text-foreground"
+            style={{ letterSpacing: '-0.02em' }}
+          >
             Trending Now
           </h2>
           <div className="section-header-line" />
@@ -35,12 +42,20 @@ export default function Sidebar() {
                   href={`/article?slug=${article.slug}`}
                   className="flex gap-3 py-3 border-b border-border last:border-0 group"
                 >
-                  <span className="font-display text-2xl font-800 text-border flex-shrink-0 w-6 leading-none mt-0.5" style={{ fontWeight: 800, color: 'var(--border)' }}>
+                  <span
+                    className="font-display text-2xl font-800 text-border flex-shrink-0 w-6 leading-none mt-0.5"
+                    style={{ fontWeight: 800, color: 'var(--border)' }}
+                  >
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className={`category-badge ${badgeClass} mb-1.5`}>{article.category}</span>
-                    <h4 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug" style={{ letterSpacing: '-0.01em' }}>
+                    <span className={`category-badge ${badgeClass} mb-1.5`}>
+                      {article.category}
+                    </span>
+                    <h4
+                      className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug"
+                      style={{ letterSpacing: '-0.01em' }}
+                    >
                       {article.title}
                     </h4>
                   </div>
@@ -53,13 +68,17 @@ export default function Sidebar() {
 
       {/* Follow Us */}
       <div className="bg-card rounded-xl border border-border p-5">
-        <h3 className="font-display text-base font-bold text-foreground mb-4" style={{ letterSpacing: '-0.02em' }}>
+        <h3
+          className="font-display text-base font-bold text-foreground mb-4"
+          style={{ letterSpacing: '-0.02em' }}
+        >
           Follow Us
         </h3>
         <div className="flex flex-col gap-2">
           {[
             {
-              label: 'Twitter / X', sub: '@daily_bytenews',
+              label: 'Twitter / X',
+              sub: '@daily_bytenews',
               href: 'https://twitter.com/daily_bytenews',
               color: '#000000',
               icon: (
@@ -69,7 +88,8 @@ export default function Sidebar() {
               ),
             },
             {
-              label: 'Instagram', sub: '@daily_bytenews',
+              label: 'Instagram',
+              sub: '@daily_bytenews',
               href: 'https://instagram.com/daily_bytenews',
               color: '#E1306C',
               icon: (
@@ -86,11 +106,16 @@ export default function Sidebar() {
               rel="noopener noreferrer"
               className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-background transition-colors group min-h-[44px]"
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: social.color }}>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                style={{ backgroundColor: social.color }}
+              >
                 {social.icon}
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{social.label}</p>
+                <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                  {social.label}
+                </p>
                 <p className="text-xs text-muted">{social.sub}</p>
               </div>
             </a>

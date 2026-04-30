@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { articles } from '@/lib/articles';
+import { articles as fallbackArticles, type Article } from '@/lib/articles';
+import { rowToArticle, type ArticleRow } from '@/lib/article-shared';
+import { createClient } from '@/lib/supabase/client';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -16,29 +18,71 @@ import {
 const categoryColors: Record<string, string> = {
   'AI & Tech': 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   'Business & Markets': 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  'Trending': 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  'Explainers': 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  'Opinion': 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  Trending: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  Explainers: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  Opinion: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
 };
 
 export default function AdminArticlesPage() {
+  const [articleList, setArticleList] = useState<Article[]>(fallbackArticles);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
-  const categories = ['all', ...Array.from(new Set(articles.map((a) => a.category)))];
+  useEffect(() => {
+    let mounted = true;
 
-  const filtered = articles.filter((a) => {
-    const matchSearch = a.title.toLowerCase().includes(search.toLowerCase()) ||
+    async function loadArticles() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .order('published_at', { ascending: false });
+
+      if (!mounted) return;
+
+      if (error) {
+        setLoadError(error.message);
+      } else {
+        setArticleList((data ?? []).map((row) => rowToArticle(row as ArticleRow)));
+        setLoadError('');
+      }
+
+      setLoading(false);
+    }
+
+    loadArticles();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const categories = ['all', ...Array.from(new Set(articleList.map((a) => a.category)))];
+
+  const filtered = articleList.filter((a) => {
+    const matchSearch =
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
       a.author.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === 'all' || a.category === filterCategory;
     return matchSearch && matchCat;
   });
 
-  const handleDelete = (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
     if (confirm(`Delete "${title}"? This cannot be undone.`)) {
       setDeletingId(id);
-      setTimeout(() => setDeletingId(null), 1000);
+      const supabase = createClient();
+      const { error } = await supabase.from('articles').delete().eq('id', id);
+
+      if (error) {
+        setLoadError(error.message);
+      } else {
+        setArticleList((prev) => prev.filter((article) => article.id !== id));
+      }
+
+      setDeletingId(null);
     }
   };
 
@@ -48,7 +92,9 @@ export default function AdminArticlesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Articles</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{articles.length} total articles</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            {loading ? 'Loading articles...' : `${articleList.length} total articles`}
+          </p>
         </div>
         <Link
           href="/admin/articles/new"
@@ -58,6 +104,12 @@ export default function AdminArticlesPage() {
           New Article
         </Link>
       </div>
+
+      {loadError && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+          Supabase articles table is not ready yet: {loadError}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 flex flex-col sm:flex-row gap-3">
@@ -95,12 +147,24 @@ export default function AdminArticlesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Category</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Author</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
+                    Category
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                    Author
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                    Date
+                  </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -110,30 +174,42 @@ export default function AdminArticlesPage() {
                     className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors ${deletingId === article.id ? 'opacity-40' : ''}`}
                   >
                     <td className="px-5 py-4 max-w-xs">
-                      <p className="font-medium text-gray-900 dark:text-white line-clamp-2 leading-snug">{article.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">{article.readTime}</p>
+                      <p className="font-medium text-gray-900 dark:text-white line-clamp-2 leading-snug">
+                        {article.title}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">
+                        {article.readTime}
+                      </p>
                     </td>
                     <td className="px-4 py-4 hidden md:table-cell">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${categoryColors[article.category] || 'bg-gray-100 text-gray-600'}`}>
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${categoryColors[article.category] || 'bg-gray-100 text-gray-600'}`}
+                      >
                         {article.category}
                       </span>
                     </td>
                     <td className="px-4 py-4 hidden lg:table-cell">
-                      <span className="text-gray-600 dark:text-gray-400 text-sm">{article.author}</span>
+                      <span className="text-gray-600 dark:text-gray-400 text-sm">
+                        {article.author}
+                      </span>
                     </td>
                     <td className="px-4 py-4 hidden lg:table-cell">
-                      <span className="text-gray-500 dark:text-gray-400 text-xs">{article.date}</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">
+                        {article.date}
+                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1.5">
                         {article.trending && (
                           <span className="inline-flex items-center gap-1 text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">
-                            <FireIcon className="w-3 h-3" />Hot
+                            <FireIcon className="w-3 h-3" />
+                            Hot
                           </span>
                         )}
                         {article.featured && (
                           <span className="inline-flex items-center gap-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded font-medium">
-                            <StarIcon className="w-3 h-3" />Featured
+                            <StarIcon className="w-3 h-3" />
+                            Featured
                           </span>
                         )}
                         {!article.trending && !article.featured && (

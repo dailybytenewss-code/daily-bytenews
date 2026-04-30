@@ -1,11 +1,17 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { articles, getFeaturedArticle, getLatestArticles, getArticlesByCategory } from '@/lib/articles';
+import {
+  getArticlesByCategory,
+  getFeaturedArticle,
+  getLatestArticles,
+  getTrendingArticles,
+} from '@/lib/article-db';
 import HomepageContent from './homepage/components/HomepageContent';
 
 export const metadata: Metadata = {
   title: 'DailyByteNews — Tech. Trends. Now.',
-  description: 'Breaking AI, technology, and business news for the modern Indian reader. Fast, trustworthy, ad-minimal.',
+  description:
+    'Breaking AI, technology, and business news for the modern Indian reader. Fast, trustworthy, ad-minimal.',
   alternates: { canonical: 'https://dailybytenews.in' },
   openGraph: {
     title: 'DailyByteNews — Tech. Trends. Now.',
@@ -15,12 +21,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootPage() {
-  const featured = getFeaturedArticle();
-  const latest = getLatestArticles(6);
-  const aiArticles = getArticlesByCategory('ai-tech');
-  const businessArticles = getArticlesByCategory('business');
-  const trendingArticles = articles.filter((a) => a.trending).slice(0, 4);
+export default async function RootPage() {
+  const [featured, latest, aiArticles, businessArticles, trendingArticles] = await Promise.all([
+    getFeaturedArticle(),
+    getLatestArticles(6),
+    getArticlesByCategory('ai-tech'),
+    getArticlesByCategory('business'),
+    getTrendingArticles(4),
+  ]);
 
   return (
     <>

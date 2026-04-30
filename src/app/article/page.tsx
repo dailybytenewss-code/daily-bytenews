@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { getArticleBySlug, getLatestArticles } from '@/lib/articles';
+import { getArticleBySlug, getLatestArticles, getTrendingArticles } from '@/lib/article-db';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ArticleBody from './components/ArticleBody';
@@ -24,16 +24,24 @@ interface ArticlePageProps {
 export default async function ArticlePage({ searchParams }: ArticlePageProps) {
   const { slug: slugParam } = await searchParams;
   const slug = slugParam || 'only-20-percent-companies-winning-ai-race-pwc-study';
-  const article = getArticleBySlug(slug);
-  const related = getLatestArticles(3).filter((a) => a.slug !== slug);
+  const [article, latest, trendingArticles] = await Promise.all([
+    getArticleBySlug(slug),
+    getLatestArticles(4),
+    getTrendingArticles(),
+  ]);
+  const related = latest.filter((a) => a.slug !== slug).slice(0, 3);
 
   if (!article) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-[720px] mx-auto px-4 py-24 text-center">
-          <h1 className="font-display text-3xl font-bold text-foreground mb-4">Article not found</h1>
-          <Link href="/" className="text-primary font-semibold hover:underline">← Back to homepage</Link>
+          <h1 className="font-display text-3xl font-bold text-foreground mb-4">
+            Article not found
+          </h1>
+          <Link href="/" className="text-primary font-semibold hover:underline">
+            ← Back to homepage
+          </Link>
         </div>
         <Footer />
       </div>
@@ -54,7 +62,10 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
     },
     datePublished: article.date,
     dateModified: article.date,
-    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://dailybytenews.in/article?slug=${article.slug}` },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://dailybytenews.in/article?slug=${article.slug}`,
+    },
   };
 
   return (
@@ -74,7 +85,7 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
             {/* Sidebar */}
             <div className="lg:w-80 flex-shrink-0">
               <div className="sticky-sidebar">
-                <Sidebar />
+                <Sidebar trendingArticles={trendingArticles} />
               </div>
             </div>
           </div>

@@ -38,11 +38,7 @@ export default function HomepageContent({
             {/* Main Content */}
             <div className="flex-1 min-w-0">
               <LatestGrid articles={latest} />
-              <CategoryStrip
-                title="AI & Tech"
-                categorySlug="ai-tech"
-                articles={aiArticles}
-              />
+              <CategoryStrip title="AI & Tech" categorySlug="ai-tech" articles={aiArticles} />
               <CategoryStrip
                 title="Business & Markets"
                 categorySlug="business"
@@ -58,7 +54,7 @@ export default function HomepageContent({
             {/* Sidebar */}
             <div className="lg:w-80 xl:w-88 flex-shrink-0">
               <div className="sticky-sidebar">
-                <Sidebar />
+                <Sidebar trendingArticles={trendingArticles} />
               </div>
             </div>
           </div>
