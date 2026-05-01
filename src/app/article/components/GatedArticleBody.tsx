@@ -56,12 +56,6 @@ export default function GatedArticleBody({ article }: GatedArticleBodyProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [hasAccess]);
 
-  const grantAccess = () => {
-    localStorage.setItem(ACCESS_KEY, 'true');
-    setHasAccess(true);
-    setGateVisible(false);
-  };
-
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
@@ -78,7 +72,11 @@ export default function GatedArticleBody({ article }: GatedArticleBodyProps) {
       result.message === 'Resubscribed successfully'
     ) {
       setSuccess(true);
-      setTimeout(grantAccess, 1200);
+      localStorage.setItem(ACCESS_KEY, 'true');
+      setTimeout(() => {
+        setHasAccess(true);
+        setGateVisible(false);
+      }, 1200);
     } else {
       setError(result.message || 'Something went wrong. Please try again.');
     }
@@ -192,16 +190,10 @@ export default function GatedArticleBody({ article }: GatedArticleBodyProps) {
                   <p className="mt-3 text-xs text-red-500 dark:text-red-400">{error}</p>
                 )}
 
-                {/* Fine print */}
+                {/* Fine print — no bypass, email required */}
                 <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
                   No spam. Unsubscribe anytime.{' '}
-                  <button
-                    type="button"
-                    onClick={grantAccess}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                  >
-                    Already subscribed?
-                  </button>
+                  Already a subscriber? Enter your email above — it unlocks instantly.
                 </p>
               </>
             )}
