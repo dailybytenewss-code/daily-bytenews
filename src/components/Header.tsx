@@ -12,14 +12,6 @@ const navLinks = [
   { label: 'Trending', href: '/category?cat=trending' },
 ];
 
-const FALLBACK_TICKER = [
-  'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
-  "Anthropic's MCP crosses 97 million developer installs",
-  'TSMC posts record Q1 revenue on AI chip demand surge',
-  'Atlassian cuts 1,600 jobs in AI-first restructuring',
-  'India UPI hits 18 billion monthly transactions milestone',
-];
-
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -27,10 +19,10 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_TICKER);
+  const [tickerItems, setTickerItems] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Load breaking news ticker from database
+  // Load breaking news ticker live from database
   useEffect(() => {
     fetch('/api/breaking-news')
       .then((r) => r.json())
@@ -39,7 +31,7 @@ export default function Header() {
           setTickerItems(items);
         }
       })
-      .catch(() => {/* keep fallback */});
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

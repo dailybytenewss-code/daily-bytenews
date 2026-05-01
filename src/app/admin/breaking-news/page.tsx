@@ -1,15 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, BoltIcon, CheckIcon } from '@heroicons/react/24/outline';
-
-const FALLBACK_ITEMS = [
-  'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
-  "Anthropic's MCP crosses 97 million developer installs",
-  'TSMC posts record Q1 revenue on AI chip demand surge',
-  'Atlassian cuts 1,600 jobs in AI-first restructuring',
-  'India UPI hits 18 billion monthly transactions milestone',
-];
 
 export default function BreakingNewsPage() {
   const [items, setItems] = useState<string[]>([]);
@@ -19,16 +12,18 @@ export default function BreakingNewsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Load from database on mount
+  // Load current items from Supabase on mount
   useEffect(() => {
-    fetch('/api/breaking-news')
-      .then((r) => r.json())
-      .then((data) => {
-        setItems(Array.isArray(data) && data.length > 0 ? data : FALLBACK_ITEMS);
-        setLoading(false);
-      })
-      .catch(() => {
-        setItems(FALLBACK_ITEMS);
+    const supabase = createClient();
+    supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'breaking_news')
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+          setItems(data.value as string[]);
+        }
         setLoading(false);
       });
   }, []);
@@ -59,27 +54,24 @@ export default function BreakingNewsPage() {
     });
   };
 
+  // Save directly via Supabase client (uses the logged-in admin session)
   const handleSave = async () => {
     setSaving(true);
     setError('');
 
-    try {
-      const res = await fetch('/api/breaking-news', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      });
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('site_settings')
+      .upsert(
+        { key: 'breaking_news', value: items, updated_at: new Date().toISOString() },
+        { onConflict: 'key' }
+      );
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to save. Make sure the site_settings table exists in Supabase.');
-      } else {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
-      }
-    } catch {
-      setError('Network error. Please try again.');
+    if (error) {
+      setError('Save failed: ' + error.message);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
     }
 
     setSaving(false);
@@ -96,31 +88,18 @@ export default function BreakingNewsPage() {
         </div>
         <button
           onClick={handleSave}
-          disabled={saving || loading}
+          disabled={saving || loading || items.length === 0}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
         >
           {saved ? (
-            <>
-              <CheckIcon className="w-4 h-4" />
-              Saved!
-            </>
-          ) : saving ? (
-            'Saving...'
-          ) : (
-            'Save Changes'
-          )}
+            <><CheckIcon className="w-4 h-4" />Saved!</>
+          ) : saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {error}
-          <p className="mt-1 text-xs opacity-80">
-            Run this SQL in Supabase:{' '}
-            <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
-              CREATE TABLE site_settings (key text PRIMARY KEY, value jsonb, updated_at timestamptz DEFAULT now());
-            </code>
-          </p>
         </div>
       )}
 
@@ -134,12 +113,12 @@ export default function BreakingNewsPage() {
           {loading ? (
             <p className="text-xs font-medium opacity-60">Loading...</p>
           ) : (
-            <p className="text-xs font-medium truncate">{items[0] || 'No items yet...'}</p>
+            <p className="text-xs font-medium truncate">{items[0] || 'No items yet — add one below'}</p>
           )}
         </div>
       </div>
 
-      {/* Add new */}
+      {/* Add new item */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
           Add Breaking News Item
@@ -172,13 +151,13 @@ export default function BreakingNewsPage() {
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Current Items ({items.length})
           </h3>
-          <p className="text-xs text-gray-400">Reorder with arrows · Click Save to publish</p>
+          <p className="text-xs text-gray-400">Reorder · then click Save Changes</p>
         </div>
 
         {loading ? (
           <div className="py-8 text-center">
             <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-gray-400 mt-2">Loading ticker items...</p>
+            <p className="text-xs text-gray-400 mt-2">Loading...</p>
           </div>
         ) : items.length === 0 ? (
           <div className="py-12 text-center">
@@ -193,29 +172,19 @@ export default function BreakingNewsPage() {
                 className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
               >
                 <div className="flex flex-col gap-0.5 flex-shrink-0">
-                  <button
-                    onClick={() => moveUp(i)}
-                    disabled={i === 0}
-                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors"
-                  >
+                  <button onClick={() => moveUp(i)} disabled={i === 0}
+                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 disabled:opacity-30 transition-colors">
                     <ArrowUpIcon className="w-3 h-3" />
                   </button>
-                  <button
-                    onClick={() => moveDown(i)}
-                    disabled={i === items.length - 1}
-                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors"
-                  >
+                  <button onClick={() => moveDown(i)} disabled={i === items.length - 1}
+                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 disabled:opacity-30 transition-colors">
                     <ArrowDownIcon className="w-3 h-3" />
                   </button>
                 </div>
-                <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0 text-center">
-                  {i + 1}
-                </span>
+                <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0 text-center">{i + 1}</span>
                 <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">{item}</p>
-                <button
-                  onClick={() => remove(i)}
-                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
+                <button onClick={() => remove(i)}
+                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
                   <TrashIcon className="w-4 h-4" />
                 </button>
               </div>
@@ -225,7 +194,7 @@ export default function BreakingNewsPage() {
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        Changes are saved to Supabase and reflected live across the site within seconds.
+        Changes are saved to Supabase and reflected live on the site.
       </p>
     </div>
   );
