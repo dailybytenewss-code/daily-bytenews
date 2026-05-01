@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { getArticleBySlug, getLatestArticles, getTrendingArticles } from '@/lib/article-db';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import ArticleBody from './components/ArticleBody';
+import GatedArticleBody from './components/GatedArticleBody';
 import ArticleHero from './components/ArticleHero';
 import RelatedArticles from './components/RelatedArticles';
 import ArticleShareBar from './components/ArticleShareBar';
@@ -96,7 +96,7 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
             {/* Article Content */}
             <article className="flex-1 min-w-0 max-w-[720px]">
               <ArticleHero article={article} />
-              <ArticleBody article={article} />
+              <GatedArticleBody article={article} />
               <AuthorBio article={article} />
               <RelatedArticles articles={related} />
             </article>
