@@ -30,10 +30,13 @@ export default async function Homepage() {
     getTrendingArticles(4),
   ]);
 
+  // If no featured, use first article as featured
+  const featuredArticle = featured || latest[0] || null;
+
   return (
     <>
       <HomepageContent
-        featured={featured}
+        featured={featuredArticle}
         latest={latest}
         aiArticles={aiArticles}
         businessArticles={businessArticles}

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 
-import { getTrendingArticles as getFallbackTrendingArticles, type Article } from '@/lib/articles';
+import type { Article } from '@/lib/articles';
 
 const categoryColorMap: Record<string, string> = {
   blue: 'category-badge-blue',
@@ -17,7 +17,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ trendingArticles }: SidebarProps) {
-  const trending = trendingArticles?.length ? trendingArticles : getFallbackTrendingArticles();
+  const trending = trendingArticles ?? [];
 
   return (
     <aside className="w-full space-y-6">
@@ -33,37 +33,41 @@ export default function Sidebar({ trendingArticles }: SidebarProps) {
           </h2>
           <div className="section-header-line" />
         </div>
-        <ol className="space-y-0">
-          {trending.map((article, index) => {
-            const badgeClass = categoryColorMap[article.categoryColor] || 'category-badge-blue';
-            return (
-              <li key={article.id}>
-                <Link
-                  href={`/article?slug=${article.slug}`}
-                  className="flex gap-3 py-3 border-b border-border last:border-0 group"
-                >
-                  <span
-                    className="font-display text-2xl font-800 text-border flex-shrink-0 w-6 leading-none mt-0.5"
-                    style={{ fontWeight: 800, color: 'var(--border)' }}
+        {trending.length > 0 ? (
+          <ol className="space-y-0">
+            {trending.map((article, index) => {
+              const badgeClass = categoryColorMap[article.categoryColor] || 'category-badge-blue';
+              return (
+                <li key={article.id}>
+                  <Link
+                    href={`/article?slug=${article.slug}`}
+                    className="flex gap-3 py-3 border-b border-border last:border-0 group"
                   >
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <span className={`category-badge ${badgeClass} mb-1.5`}>
-                      {article.category}
-                    </span>
-                    <h4
-                      className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug"
-                      style={{ letterSpacing: '-0.01em' }}
+                    <span
+                      className="font-display text-2xl font-800 text-border flex-shrink-0 w-6 leading-none mt-0.5"
+                      style={{ fontWeight: 800, color: 'var(--border)' }}
                     >
-                      {article.title}
-                    </h4>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ol>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className={`category-badge ${badgeClass} mb-1.5`}>
+                        {article.category}
+                      </span>
+                      <h4
+                        className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug"
+                        style={{ letterSpacing: '-0.01em' }}
+                      >
+                        {article.title}
+                      </h4>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="text-sm text-muted py-6">No trending articles yet</p>
+        )}
       </div>
 
       {/* Follow Us */}

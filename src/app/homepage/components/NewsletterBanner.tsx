@@ -1,16 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
+import { subscribeEmail } from '@/lib/subscriber-db';
 
 export default function NewsletterBanner() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    setError('');
+
+    if (!email.trim()) return;
+
+    setLoading(true);
+    const result = await subscribeEmail(email);
+    setLoading(false);
+
+    if (result.success) {
       setSubmitted(true);
       setEmail('');
+      setTimeout(() => setSubmitted(false), 5000);
+    } else {
+      setError(result.message);
     }
   };
 
@@ -20,7 +34,10 @@ export default function NewsletterBanner() {
         <span className="inline-block bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded mb-4">
           Newsletter
         </span>
-        <h2 className="font-display text-white font-bold mb-3" style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', letterSpacing: '-0.025em' }}>
+        <h2
+          className="font-display text-white font-bold mb-3"
+          style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', letterSpacing: '-0.025em' }}
+        >
           The Daily Byte — In Your Inbox
         </h2>
         <p className="text-white/80 text-base mb-8 leading-relaxed">
@@ -31,22 +48,29 @@ export default function NewsletterBanner() {
             ✓ You're in! Check your inbox for a welcome note.
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email address"
-              required
-              className="flex-1 px-4 py-3 rounded-lg text-sm text-foreground bg-white border-0 focus:outline-none focus:ring-2 focus:ring-white/40 placeholder-muted"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3 rounded-lg bg-dark-navy text-white text-sm font-bold hover:opacity-90 transition-opacity min-h-[44px] flex-shrink-0"
-            >
-              Subscribe Free
-            </button>
-          </form>
+          <>
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address"
+                required
+                disabled={loading}
+                className="flex-1 px-4 py-3 rounded-lg text-sm text-foreground bg-white border-0 focus:outline-none focus:ring-2 focus:ring-white/40 placeholder-muted disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-3 rounded-lg bg-dark-navy text-white text-sm font-bold hover:opacity-90 transition-opacity min-h-[44px] flex-shrink-0 disabled:opacity-50"
+              >
+                {loading ? 'Subscribing...' : 'Subscribe Free'}
+              </button>
+            </form>
+            {error && (
+              <p className="text-white/70 text-xs mt-3">{error}</p>
+            )}
+          </>
         )}
         <p className="text-white/50 text-xs mt-4">No spam. Unsubscribe with one click.</p>
       </div>

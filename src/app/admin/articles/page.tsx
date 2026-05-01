@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { articles as fallbackArticles, type Article } from '@/lib/articles';
+import type { Article } from '@/lib/articles';
 import { rowToArticle, type ArticleRow } from '@/lib/article-shared';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -24,7 +24,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function AdminArticlesPage() {
-  const [articleList, setArticleList] = useState<Article[]>(fallbackArticles);
+  const [articleList, setArticleList] = useState<Article[]>([]);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);

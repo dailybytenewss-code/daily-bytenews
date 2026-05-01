@@ -23,13 +23,30 @@ interface ArticlePageProps {
 
 export default async function ArticlePage({ searchParams }: ArticlePageProps) {
   const { slug: slugParam } = await searchParams;
-  const slug = slugParam || 'only-20-percent-companies-winning-ai-race-pwc-study';
-  const [article, latest, trendingArticles] = await Promise.all([
-    getArticleBySlug(slug),
-    getLatestArticles(4),
-    getTrendingArticles(),
-  ]);
-  const related = latest.filter((a) => a.slug !== slug).slice(0, 3);
+
+  let article: any = null;
+  let related: any[] = [];
+  let trendingArticles: any[] = [];
+
+  if (slugParam) {
+    const [articleData, latest, trending] = await Promise.all([
+      getArticleBySlug(slugParam),
+      getLatestArticles(4),
+      getTrendingArticles(),
+    ]);
+    article = articleData;
+    related = latest.filter((a) => a.slug !== slugParam).slice(0, 3);
+    trendingArticles = trending;
+  } else {
+    // No slug provided - show first published article or 404
+    const [latest, trending] = await Promise.all([
+      getLatestArticles(1),
+      getTrendingArticles(),
+    ]);
+    article = latest[0] || null;
+    related = [];
+    trendingArticles = trending;
+  }
 
   if (!article) {
     return (
@@ -85,7 +102,7 @@ export default async function ArticlePage({ searchParams }: ArticlePageProps) {
             {/* Sidebar */}
             <div className="lg:w-80 flex-shrink-0">
               <div className="sticky-sidebar">
-                <Sidebar trendingArticles={trendingArticles} />
+                <Sidebar trendingArticles={trendingArticles || []} />
               </div>
             </div>
           </div>

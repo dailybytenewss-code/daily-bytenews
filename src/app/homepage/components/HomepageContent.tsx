@@ -11,7 +11,7 @@ import Sidebar from '@/components/Sidebar';
 import type { Article } from '@/lib/articles';
 
 interface HomepageContentProps {
-  featured: Article;
+  featured: Article | null;
   latest: Article[];
   aiArticles: Article[];
   businessArticles: Article[];
@@ -30,7 +30,7 @@ export default function HomepageContent({
       <Header />
       <main>
         {/* Hero */}
-        <HeroSection article={featured} />
+        {featured && <HeroSection article={featured} />}
 
         {/* Main Content + Sidebar */}
         <div className="max-w-[1200px] mx-auto px-4 py-10">

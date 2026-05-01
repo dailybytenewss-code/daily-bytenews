@@ -1,4 +1,3 @@
-import { articles as fallbackArticles } from '@/lib/articles';
 import { createClient } from '@/lib/supabase/server';
 import type { Article } from '@/lib/articles';
 import { rowToArticle, type ArticleRow } from '@/lib/article-shared';
@@ -11,11 +10,7 @@ function createPublicReadClient() {
   return createSupabaseClient(supabaseUrl!, supabaseKey!);
 }
 
-function sortFallbackArticles() {
-  return [...fallbackArticles].sort((a, b) => b.id.localeCompare(a.id));
-}
-
-async function fetchArticleRows(includeDrafts = false): Promise<ArticleRow[] | null> {
+async function fetchArticleRows(includeDrafts = false): Promise<ArticleRow[]> {
   try {
     const supabase = includeDrafts ? await createClient() : createPublicReadClient();
     let query = supabase.from('articles').select('*').order('published_at', { ascending: false });
@@ -26,21 +21,19 @@ async function fetchArticleRows(includeDrafts = false): Promise<ArticleRow[] | n
 
     const { data, error } = await query;
     if (error) {
-      console.warn('Supabase articles read failed:', error.message);
-      return null;
+      console.error('Supabase articles read failed:', error.message);
+      return [];
     }
 
     return (data ?? []) as ArticleRow[];
   } catch (error) {
-    console.warn('Supabase articles read failed:', error);
-    return null;
+    console.error('Supabase articles read failed:', error);
+    return [];
   }
 }
 
 export async function getArticles(includeDrafts = false): Promise<Article[]> {
   const rows = await fetchArticleRows(includeDrafts);
-  if (includeDrafts && rows) return rows.map(rowToArticle);
-  if (!rows?.length) return sortFallbackArticles();
   return rows.map(rowToArticle);
 }
 
@@ -70,10 +63,10 @@ export async function getArticleBySlug(slug: string): Promise<Article | undefine
       }
     }
   } catch (error) {
-    console.warn('Supabase article read failed:', error);
+    console.error('Supabase article read failed:', error);
   }
 
-  return fallbackArticles.find((article) => article.slug === slug);
+  return undefined;
 }
 
 export async function getArticlesByCategory(categorySlug: string): Promise<Article[]> {
@@ -81,9 +74,9 @@ export async function getArticlesByCategory(categorySlug: string): Promise<Artic
   return articles.filter((article) => article.categorySlug === categorySlug);
 }
 
-export async function getFeaturedArticle(): Promise<Article> {
+export async function getFeaturedArticle(): Promise<Article | null> {
   const articles = await getArticles(false);
-  return articles.find((article) => article.featured) ?? articles[0] ?? fallbackArticles[0];
+  return articles.find((article) => article.featured) ?? articles[0] ?? null;
 }
 
 export async function getTrendingArticles(count = 5): Promise<Article[]> {
