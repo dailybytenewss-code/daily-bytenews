@@ -11,6 +11,8 @@ import AuthorBio from './components/AuthorBio';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Article — DailyByteNews',
   description: 'Read the latest tech and AI news on DailyByteNews.',

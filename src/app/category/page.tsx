@@ -6,6 +6,8 @@ import CategoryPageContent from './components/CategoryPageContent';
 import { categories } from '@/lib/articles';
 import { getArticles, getTrendingArticles } from '@/lib/article-db';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Category — DailyByteNews',
   description: 'Browse articles by category on DailyByteNews.',

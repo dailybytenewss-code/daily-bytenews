@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, BoltIcon, CheckIcon } from '@heroicons/react/24/outline';
 
-const DEFAULT_ITEMS = [
+const FALLBACK_ITEMS = [
   'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
   "Anthropic's MCP crosses 97 million developer installs",
   'TSMC posts record Q1 revenue on AI chip demand surge',
@@ -12,9 +12,26 @@ const DEFAULT_ITEMS = [
 ];
 
 export default function BreakingNewsPage() {
-  const [items, setItems] = useState<string[]>(DEFAULT_ITEMS);
+  const [items, setItems] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Load from database on mount
+  useEffect(() => {
+    fetch('/api/breaking-news')
+      .then((r) => r.json())
+      .then((data) => {
+        setItems(Array.isArray(data) && data.length > 0 ? data : FALLBACK_ITEMS);
+        setLoading(false);
+      })
+      .catch(() => {
+        setItems(FALLBACK_ITEMS);
+        setLoading(false);
+      });
+  }, []);
 
   const add = () => {
     if (!newItem.trim()) return;
@@ -42,9 +59,30 @@ export default function BreakingNewsPage() {
     });
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/breaking-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to save. Make sure the site_settings table exists in Supabase.');
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    }
+
+    setSaving(false);
   };
 
   return (
@@ -52,15 +90,39 @@ export default function BreakingNewsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Breaking News Ticker</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Manage the scrolling news ticker shown at the top of every page</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            Manage the scrolling ticker shown at the top of every page
+          </p>
         </div>
         <button
           onClick={handleSave}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          disabled={saving || loading}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
         >
-          {saved ? '✓ Saved!' : 'Save Changes'}
+          {saved ? (
+            <>
+              <CheckIcon className="w-4 h-4" />
+              Saved!
+            </>
+          ) : saving ? (
+            'Saving...'
+          ) : (
+            'Save Changes'
+          )}
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-600 dark:text-red-400">
+          {error}
+          <p className="mt-1 text-xs opacity-80">
+            Run this SQL in Supabase:{' '}
+            <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">
+              CREATE TABLE site_settings (key text PRIMARY KEY, value jsonb, updated_at timestamptz DEFAULT now());
+            </code>
+          </p>
+        </div>
+      )}
 
       {/* Live preview */}
       <div className="bg-red-500 text-white rounded-xl px-4 py-3 overflow-hidden">
@@ -69,13 +131,19 @@ export default function BreakingNewsPage() {
           <span className="flex-shrink-0 bg-white text-red-500 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded">
             BYTE ALERT
           </span>
-          <p className="text-xs font-medium truncate">{items[0] || 'No items yet...'}</p>
+          {loading ? (
+            <p className="text-xs font-medium opacity-60">Loading...</p>
+          ) : (
+            <p className="text-xs font-medium truncate">{items[0] || 'No items yet...'}</p>
+          )}
         </div>
       </div>
 
       {/* Add new */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add Breaking News Item</h3>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          Add Breaking News Item
+        </h3>
         <div className="flex gap-2">
           <input
             type="text"
@@ -101,10 +169,18 @@ export default function BreakingNewsPage() {
       {/* Items list */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Current Items ({items.length})</h3>
-          <p className="text-xs text-gray-400">Drag to reorder · Items scroll in order</p>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Current Items ({items.length})
+          </h3>
+          <p className="text-xs text-gray-400">Reorder with arrows · Click Save to publish</p>
         </div>
-        {items.length === 0 ? (
+
+        {loading ? (
+          <div className="py-8 text-center">
+            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-gray-400 mt-2">Loading ticker items...</p>
+          </div>
+        ) : items.length === 0 ? (
           <div className="py-12 text-center">
             <BoltIcon className="w-8 h-8 text-gray-300 dark:text-gray-700 mx-auto mb-2" />
             <p className="text-sm text-gray-400">No ticker items. Add one above.</p>
@@ -112,21 +188,34 @@ export default function BreakingNewsPage() {
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {items.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group">
+              <div
+                key={i}
+                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors group"
+              >
                 <div className="flex flex-col gap-0.5 flex-shrink-0">
-                  <button onClick={() => moveUp(i)} disabled={i === 0}
-                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors">
+                  <button
+                    onClick={() => moveUp(i)}
+                    disabled={i === 0}
+                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors"
+                  >
                     <ArrowUpIcon className="w-3 h-3" />
                   </button>
-                  <button onClick={() => moveDown(i)} disabled={i === items.length - 1}
-                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors">
+                  <button
+                    onClick={() => moveDown(i)}
+                    disabled={i === items.length - 1}
+                    className="p-0.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 disabled:opacity-30 transition-colors"
+                  >
                     <ArrowDownIcon className="w-3 h-3" />
                   </button>
                 </div>
-                <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0 text-center">{i + 1}</span>
+                <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0 text-center">
+                  {i + 1}
+                </span>
                 <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">{item}</p>
-                <button onClick={() => remove(i)}
-                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                <button
+                  onClick={() => remove(i)}
+                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                >
                   <TrashIcon className="w-4 h-4" />
                 </button>
               </div>
@@ -136,7 +225,7 @@ export default function BreakingNewsPage() {
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        Changes apply after saving. Connect to Supabase to persist ticker items across deployments.
+        Changes are saved to Supabase and reflected live across the site within seconds.
       </p>
     </div>
   );

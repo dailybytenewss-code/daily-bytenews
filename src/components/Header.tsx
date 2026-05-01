@@ -12,6 +12,14 @@ const navLinks = [
   { label: 'Trending', href: '/category?cat=trending' },
 ];
 
+const FALLBACK_TICKER = [
+  'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
+  "Anthropic's MCP crosses 97 million developer installs",
+  'TSMC posts record Q1 revenue on AI chip demand surge',
+  'Atlassian cuts 1,600 jobs in AI-first restructuring',
+  'India UPI hits 18 billion monthly transactions milestone',
+];
+
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -19,7 +27,20 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [tickerItems, setTickerItems] = useState<string[]>(FALLBACK_TICKER);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Load breaking news ticker from database
+  useEffect(() => {
+    fetch('/api/breaking-news')
+      .then((r) => r.json())
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setTickerItems(items);
+        }
+      })
+      .catch(() => {/* keep fallback */});
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -223,18 +244,8 @@ export default function Header() {
           </div>
           <div className="overflow-hidden flex-1">
             <div className="news-ticker flex gap-8 text-xs font-medium">
-              {[
-                'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
-                "Anthropic's MCP crosses 97 million developer installs",
-                'TSMC posts record Q1 revenue on AI chip demand surge',
-                'Atlassian cuts 1,600 jobs in AI-first restructuring',
-                'India UPI hits 18 billion monthly transactions milestone',
-                'OpenAI hits $25B annualized revenue, eyes 2027 IPO',
-                "Anthropic's MCP crosses 97 million developer installs",
-                'TSMC posts record Q1 revenue on AI chip demand surge',
-                'Atlassian cuts 1,600 jobs in AI-first restructuring',
-                'India UPI hits 18 billion monthly transactions milestone',
-              ].map((item, i) => (
+              {/* Duplicate items for seamless infinite scroll */}
+              {[...tickerItems, ...tickerItems].map((item, i) => (
                 <span key={i} className="flex-shrink-0 flex items-center gap-2">
                   <span className="w-1 h-1 rounded-full bg-white/60 inline-block" />
                   {item}

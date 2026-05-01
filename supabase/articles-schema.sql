@@ -137,3 +137,35 @@ for all
 to authenticated
 using (true)
 with check (true);
+
+-- ─────────────────────────────────────────────────────────────
+-- site_settings table  (stores app-wide config, e.g. breaking news ticker)
+-- ─────────────────────────────────────────────────────────────
+create table if not exists public.site_settings (
+  key         text primary key,
+  value       jsonb not null default '[]'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.site_settings enable row level security;
+
+drop policy if exists "Public can read site settings" on public.site_settings;
+create policy "Public can read site settings"
+on public.site_settings
+for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Authenticated admins can manage site settings" on public.site_settings;
+create policy "Authenticated admins can manage site settings"
+on public.site_settings
+for all
+to authenticated
+using (true)
+with check (true);
+
+-- Seed default breaking news ticker items
+insert into public.site_settings (key, value) values (
+  'breaking_news',
+  '["OpenAI hits $25B annualized revenue, eyes 2027 IPO", "Anthropic''s MCP crosses 97 million developer installs", "TSMC posts record Q1 revenue on AI chip demand surge", "Atlassian cuts 1,600 jobs in AI-first restructuring", "India UPI hits 18 billion monthly transactions milestone"]'::jsonb
+) on conflict (key) do nothing;

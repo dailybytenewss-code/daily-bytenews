@@ -8,6 +8,8 @@ import {
 } from '@/lib/article-db';
 import HomepageContent from './components/HomepageContent';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'DailyByteNews — Tech. Trends. Now.',
   description:
