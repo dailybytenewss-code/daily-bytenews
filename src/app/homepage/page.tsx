@@ -4,6 +4,7 @@ import {
   getArticlesByCategory,
   getFeaturedArticle,
   getLatestArticles,
+  getTodaysArticles,
   getTrendingArticles,
 } from '@/lib/article-db';
 import HomepageContent from './components/HomepageContent';
@@ -24,15 +25,18 @@ export const metadata: Metadata = {
 };
 
 export default async function Homepage() {
-  const [featured, latest, aiArticles, businessArticles, trendingArticles] = await Promise.all([
+  const [featured, todaysArticles, aiArticles, businessArticles, trendingArticles] = await Promise.all([
     getFeaturedArticle(),
-    getLatestArticles(6),
+    getTodaysArticles(),
     getArticlesByCategory('ai-tech'),
     getArticlesByCategory('business'),
     getTrendingArticles(4),
   ]);
 
-  // If no featured, use first article as featured
+  // Latest Stories = today's articles; fall back to recent articles if none published today
+  const latest = todaysArticles.length > 0 ? todaysArticles : await getLatestArticles(6);
+
+  // If no featured, use first of today's articles (or fallback latest)
   const featuredArticle = featured || latest[0] || null;
 
   return (
