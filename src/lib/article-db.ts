@@ -49,7 +49,8 @@ export async function getArticles(includeDrafts = false): Promise<Article[]> {
 
 export async function getArticleCategories(includeInactive = false): Promise<AdminCategory[]> {
   try {
-    const supabase = includeInactive ? await createClient() : createPublicReadClient();
+    // Always use authenticated client on server to ensure full access
+    const supabase = await createClient();
     let query = supabase.from('article_categories').select('*').order('name');
 
     if (!includeInactive) {
