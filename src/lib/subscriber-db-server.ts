@@ -75,6 +75,10 @@ function bodyToHtml(body: string) {
         .join('\n');
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function recordCampaign(
   input: NewsletterSendInput,
   status: 'sent' | 'failed',
@@ -187,6 +191,9 @@ export async function sendNewsletterCampaign(
         firstFailure = error instanceof Error ? error.message : 'Unknown send failure';
       }
     }
+
+    // Respect Resend's rate limit: 2 requests per second = 600ms delay between requests
+    await delay(600);
   }
 
   const success = sentCount > 0 && failedCount === 0;
