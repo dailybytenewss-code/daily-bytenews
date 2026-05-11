@@ -10,8 +10,6 @@ interface CategoryStripProps {
 }
 
 export default function CategoryStrip({ title, categorySlug, articles }: CategoryStripProps) {
-  if (!articles.length) return null;
-
   return (
     <section className="mb-12">
       {/* Section Header */}
@@ -34,11 +32,17 @@ export default function CategoryStrip({ title, categorySlug, articles }: Categor
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-        {articles.slice(0, 3).map((article) => (
-          <ArticleCard key={article.id} article={article} showExcerpt />
-        ))}
-      </div>
+      {articles.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          {articles.slice(0, 3).map((article) => (
+            <ArticleCard key={article.id} article={article} showExcerpt />
+          ))}
+        </div>
+      ) : (
+        <div className="py-12 text-center text-gray-400 dark:text-gray-500">
+          <p>No articles yet in this category</p>
+        </div>
+      )}
     </section>
   );
 }

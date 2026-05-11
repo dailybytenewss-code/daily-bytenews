@@ -51,6 +51,7 @@ export default function HeroSection({ articles }: HeroSectionProps) {
             {/* Background Image */}
             <div className="absolute inset-0">
               <AppImage
+                key={article.slug}
                 src={article.image}
                 alt={article.imageAlt}
                 fill
