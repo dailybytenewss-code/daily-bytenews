@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaPicker from '@/components/admin/MediaPicker';
 import RichTextToolbar from '@/components/admin/RichTextToolbar';
+import NotifySubscribersForm from '../components/NotifySubscribersForm';
 import { createClient } from '@/lib/supabase/client';
 import {
   DEFAULT_AUTHOR,
@@ -34,6 +35,9 @@ export default function NewArticlePage() {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [publishedArticle, setPublishedArticle] = useState<{ title: string; slug: string } | null>(
+    null
+  );
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'cover' | 'content' | 'author' | 'og'>('cover');
   const [seoOpen, setSeoOpen] = useState(false);
@@ -238,8 +242,11 @@ export default function NewArticlePage() {
     }
 
     setSaved(true);
-    router.push('/admin/articles');
-    router.refresh();
+    // Show the notify subscribers form instead of redirecting immediately
+    setPublishedArticle({
+      title: form.title,
+      slug: form.slug || slugify(form.title),
+    });
   };
 
   const inputCls =
@@ -755,6 +762,36 @@ export default function NewArticlePage() {
             </div>
           </div>
         </form>
+
+        {/* Notify Subscribers Section */}
+        {publishedArticle && (
+          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-5 mb-5">
+              <div className="flex items-start gap-3">
+                <CheckIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-green-900 dark:text-green-200">
+                    Article published successfully!
+                  </h3>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    Now notify your subscribers about this new article.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <NotifySubscribersForm
+              articleTitle={publishedArticle.title}
+              articleSlug={publishedArticle.slug}
+              onNotified={() => {
+                setTimeout(() => {
+                  router.push('/admin/articles');
+                  router.refresh();
+                }, 1000);
+              }}
+            />
+          </div>
+        )}
       </div>
     </>
   );

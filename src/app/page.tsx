@@ -2,10 +2,10 @@ import React from 'react';
 import type { Metadata } from 'next';
 import {
   getArticlesByCategory,
-  getFeaturedArticle,
   getLatestArticles,
   getTodaysArticles,
   getTrendingArticles,
+  getArticleCategories,
 } from '@/lib/article-db';
 import HomepageContent from './homepage/components/HomepageContent';
 
@@ -25,27 +25,29 @@ export const metadata: Metadata = {
 };
 
 export default async function RootPage() {
-  const [featured, todaysArticles, aiArticles, businessArticles, trendingArticles] = await Promise.all([
-    getFeaturedArticle(),
+  // Fetch all active categories and today's articles in parallel
+  const [todaysArticles, categories, trendingArticles] = await Promise.all([
     getTodaysArticles(),
-    getArticlesByCategory('ai-tech'),
-    getArticlesByCategory('business'),
+    getArticleCategories(false),
     getTrendingArticles(4),
   ]);
 
   // Latest Stories = today's articles; fall back to recent articles if none published today
-  const latest = todaysArticles.length > 0 ? todaysArticles : await getLatestArticles(6);
+  const latestArticles = todaysArticles.length > 0 ? todaysArticles : await getLatestArticles(6);
 
-  // If no featured, use first of today's articles (or fallback latest)
-  const featuredArticle = featured || latest[0] || null;
+  // Fetch articles for each category in parallel
+  const categoryArticlesData = await Promise.all(
+    categories.map(async (category) => ({
+      ...category,
+      articles: await getArticlesByCategory(category.slug, true), // excludeToday=true
+    }))
+  );
 
   return (
     <>
       <HomepageContent
-        featured={featuredArticle}
-        latest={latest}
-        aiArticles={aiArticles}
-        businessArticles={businessArticles}
+        latestArticles={latestArticles}
+        categories={categoryArticlesData}
         trendingArticles={trendingArticles}
       />
       <script

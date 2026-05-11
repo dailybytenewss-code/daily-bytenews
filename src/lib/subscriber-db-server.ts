@@ -201,3 +201,28 @@ export async function sendNewsletterCampaign(
     failedCount,
   };
 }
+
+export async function sendArticleNotification({
+  title,
+  slug,
+  customMessage,
+}: {
+  title: string;
+  slug: string;
+  customMessage?: string;
+}): Promise<{ success: boolean; message: string; sentCount: number }> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailybytenews.in';
+  const finalMessage =
+    customMessage?.trim() || `${title} - Check it out now: ${siteUrl}/article?slug=${slug}`;
+
+  const result = await sendNewsletterCampaign({
+    subject: title,
+    body: finalMessage,
+  });
+
+  return {
+    success: result.success,
+    message: result.message,
+    sentCount: result.sentCount,
+  };
+}

@@ -20,6 +20,7 @@ import {
 } from '@/lib/admin-taxonomy';
 import MediaPicker from '@/components/admin/MediaPicker';
 import RichTextToolbar from '@/components/admin/RichTextToolbar';
+import NotifySubscribersForm from '../../components/NotifySubscribersForm';
 
 const inputCls =
   'w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
@@ -34,6 +35,7 @@ export default function EditArticlePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showNotifyForm, setShowNotifyForm] = useState(false);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [status, setStatus] = useState<ArticleStatus>('published');
@@ -276,8 +278,8 @@ export default function EditArticlePage() {
     }
 
     setSaved(true);
-    router.push('/admin/articles');
-    router.refresh();
+    // Show the notify subscribers form instead of redirecting immediately
+    setShowNotifyForm(true);
   };
 
   const authorOptions =
@@ -828,6 +830,36 @@ export default function EditArticlePage() {
             </button>
           </div>
         </form>
+
+        {/* Notify Subscribers Section */}
+        {showNotifyForm && (
+          <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-5 mb-5">
+              <div className="flex items-start gap-3">
+                <CheckIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-green-900 dark:text-green-200">
+                    Article updated successfully!
+                  </h3>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    Notify your subscribers about this article update.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <NotifySubscribersForm
+              articleTitle={form.title}
+              articleSlug={form.slug}
+              onNotified={() => {
+                setTimeout(() => {
+                  router.push('/admin/articles');
+                  router.refresh();
+                }, 1000);
+              }}
+            />
+          </div>
+        )}
       </div>
     </>
   );
