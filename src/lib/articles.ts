@@ -1,3 +1,5 @@
+import { DEFAULT_CATEGORIES } from '@/lib/admin-taxonomy';
+
 export interface Article {
   id: string;
   slug: string;
@@ -21,29 +23,12 @@ export interface Article {
   content: string;
 }
 
-// Categories are static and managed here
-export const categories = [
-  {
-    name: 'AI & Tech',
-    slug: 'ai-tech',
-    description:
-      'Artificial intelligence, machine learning, developer tools, and the technology shaping tomorrow.',
-    color: 'blue' as const,
-  },
-  {
-    name: 'Business & Markets',
-    slug: 'business',
-    description:
-      'Startup funding, IPOs, market moves, and the business side of the tech industry.',
-    color: 'green' as const,
-  },
-  {
-    name: 'Trending',
-    slug: 'trending',
-    description: 'The stories everyone is talking about — viral, impactful, and worth your attention.',
-    color: 'amber' as const,
-  },
-];
+export const categories = DEFAULT_CATEGORIES.map(({ name, slug, description, color }) => ({
+  name,
+  slug,
+  description,
+  color,
+}));
 
 // Get fallback trending articles for client-side sidebar
 export function getTrendingArticles(): Article[] {

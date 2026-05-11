@@ -12,16 +12,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { createClient } from '@/lib/supabase/client';
 import { slugify, type ArticleRow, type ArticleStatus } from '@/lib/article-shared';
+import {
+  DEFAULT_AUTHOR,
+  DEFAULT_CATEGORIES,
+  type AdminCategory,
+  type AuthorProfile,
+} from '@/lib/admin-taxonomy';
 import MediaPicker from '@/components/admin/MediaPicker';
 import RichTextToolbar from '@/components/admin/RichTextToolbar';
-
-const CATEGORIES = [
-  { label: 'AI & Tech', slug: 'ai-tech', color: 'blue' },
-  { label: 'Business & Markets', slug: 'business', color: 'green' },
-  { label: 'Trending', slug: 'trending', color: 'amber' },
-  { label: 'Explainers', slug: 'explainers', color: 'blue' },
-  { label: 'Opinion', slug: 'opinion', color: 'amber' },
-];
 
 const inputCls =
   'w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
@@ -42,6 +40,9 @@ export default function EditArticlePage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'cover' | 'content' | 'author' | 'og'>('cover');
   const [seoOpen, setSeoOpen] = useState(false);
+  const [directoryWarning, setDirectoryWarning] = useState('');
+  const [authors, setAuthors] = useState<AuthorProfile[]>([DEFAULT_AUTHOR]);
+  const [categories, setCategories] = useState<AdminCategory[]>(DEFAULT_CATEGORIES);
 
   const [form, setForm] = useState({
     title: '',
@@ -51,6 +52,7 @@ export default function EditArticlePage() {
     categorySlug: 'ai-tech',
     categoryColor: 'blue',
     author: '',
+    authorSlug: '',
     authorBio: '',
     authorAvatar: '',
     date: '',
@@ -100,6 +102,7 @@ export default function EditArticlePage() {
           categorySlug: article.category_slug,
           categoryColor: article.category_color,
           author: article.author,
+          authorSlug: article.author_slug,
           authorBio: article.author_bio,
           authorAvatar: article.author_avatar,
           date: article.published_at,
@@ -123,8 +126,46 @@ export default function EditArticlePage() {
     }
 
     loadArticle();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [articleId]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDirectory() {
+      const supabase = createClient();
+      const [
+        { data: authorRows, error: authorError },
+        { data: categoryRows, error: categoryError },
+      ] = await Promise.all([
+        supabase.from('authors').select('*').eq('status', 'active').order('name'),
+        supabase.from('article_categories').select('*').eq('status', 'active').order('name'),
+      ]);
+
+      if (!mounted) return;
+
+      if (!authorError && authorRows && authorRows.length > 0) {
+        setAuthors(authorRows as AuthorProfile[]);
+      }
+
+      if (!categoryError && categoryRows && categoryRows.length > 0) {
+        setCategories(categoryRows as AdminCategory[]);
+      }
+
+      if (authorError || categoryError) {
+        setDirectoryWarning(
+          'Using saved/default author and category choices. Run the updated Supabase schema to enable managed dropdowns.'
+        );
+      }
+    }
+
+    loadDirectory();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const set = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -138,12 +179,23 @@ export default function EditArticlePage() {
   };
 
   const handleCategoryChange = (label: string) => {
-    const cat = CATEGORIES.find((c) => c.label === label)!;
+    const cat = categories.find((c) => c.name === label)!;
     setForm((prev) => ({
       ...prev,
-      category: cat.label,
+      category: cat.name,
       categorySlug: cat.slug,
       categoryColor: cat.color,
+    }));
+  };
+
+  const handleAuthorChange = (slug: string) => {
+    const author = authors.find((a) => a.slug === slug) || DEFAULT_AUTHOR;
+    setForm((prev) => ({
+      ...prev,
+      author: author.name,
+      authorSlug: author.slug,
+      authorAvatar: author.avatar_url,
+      authorBio: author.bio,
     }));
   };
 
@@ -189,7 +241,7 @@ export default function EditArticlePage() {
         category_slug: form.categorySlug,
         category_color: form.categoryColor,
         author: form.author || 'DailyByteNews',
-        author_slug: slugify(form.author || 'dailybytenews'),
+        author_slug: form.authorSlug || slugify(form.author || 'dailybytenews'),
         author_avatar: form.authorAvatar || '/assets/images/app_logo.png',
         author_bio: form.authorBio,
         published_at: form.date,
@@ -201,7 +253,10 @@ export default function EditArticlePage() {
         image: form.image,
         image_alt: form.imageAlt,
         image_caption: form.imageCaption || null,
-        tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        tags: form.tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
         featured: form.featured,
         trending: form.trending,
         status,
@@ -225,6 +280,36 @@ export default function EditArticlePage() {
     router.refresh();
   };
 
+  const authorOptions =
+    form.authorSlug && !authors.some((author) => author.slug === form.authorSlug)
+      ? [
+          {
+            ...DEFAULT_AUTHOR,
+            id: `current-${form.authorSlug}`,
+            name: form.author || DEFAULT_AUTHOR.name,
+            slug: form.authorSlug,
+            bio: form.authorBio,
+            avatar_url: form.authorAvatar || DEFAULT_AUTHOR.avatar_url,
+          },
+          ...authors,
+        ]
+      : authors;
+
+  const categoryOptions =
+    form.categorySlug && !categories.some((category) => category.slug === form.categorySlug)
+      ? [
+          {
+            id: `current-${form.categorySlug}`,
+            name: form.category,
+            slug: form.categorySlug,
+            description: '',
+            color: form.categoryColor as AdminCategory['color'],
+            status: 'active' as const,
+          },
+          ...categories,
+        ]
+      : categories;
+
   if (loading) {
     return (
       <div className="py-20 text-center">
@@ -238,7 +323,10 @@ export default function EditArticlePage() {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 dark:text-gray-400 mb-4">{error || 'Article not found.'}</p>
-        <Link href="/admin/articles" className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+        <Link
+          href="/admin/articles"
+          className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+        >
           ← Back to Articles
         </Link>
       </div>
@@ -289,8 +377,15 @@ export default function EditArticlePage() {
               className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               {saved ? (
-                <><CheckIcon className="w-4 h-4" />Saved!</>
-              ) : saving ? 'Saving...' : 'Save Changes'}
+                <>
+                  <CheckIcon className="w-4 h-4" />
+                  Saved!
+                </>
+              ) : saving ? (
+                'Saving...'
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </div>
         </div>
@@ -301,13 +396,20 @@ export default function EditArticlePage() {
           </div>
         )}
 
-        <form id="edit-form" onSubmit={handleSubmit} className="space-y-5">
+        {directoryWarning && (
+          <div className="mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            {directoryWarning}
+          </div>
+        )}
 
+        <form id="edit-form" onSubmit={handleSubmit} className="space-y-5">
           {/* Basic Info */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Basic Info</h3>
             <div>
-              <label className={labelCls}>Title <span className="text-red-500">*</span></label>
+              <label className={labelCls}>
+                Title <span className="text-red-500">*</span>
+              </label>
               <input
                 required
                 type="text"
@@ -318,7 +420,9 @@ export default function EditArticlePage() {
               />
             </div>
             <div>
-              <label className={labelCls}>Slug <span className="text-red-500">*</span></label>
+              <label className={labelCls}>
+                Slug <span className="text-red-500">*</span>
+              </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 flex-shrink-0">/article?slug=</span>
                 <input
@@ -331,7 +435,9 @@ export default function EditArticlePage() {
               </div>
             </div>
             <div>
-              <label className={labelCls}>Excerpt <span className="text-red-500">*</span></label>
+              <label className={labelCls}>
+                Excerpt <span className="text-red-500">*</span>
+              </label>
               <textarea
                 required
                 rows={3}
@@ -345,22 +451,28 @@ export default function EditArticlePage() {
 
           {/* Classification */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Classification</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Classification
+            </h3>
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
-                <label className={labelCls}>Category <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  Category <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={form.category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   className={inputCls}
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.slug}>{c.label}</option>
+                  {categoryOptions.map((c) => (
+                    <option key={c.slug}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Publish Date <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  Publish Date <span className="text-red-500">*</span>
+                </label>
                 <input
                   required
                   type="date"
@@ -409,7 +521,9 @@ export default function EditArticlePage() {
                   onChange={(e) => set('featured', e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Featured article</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Featured article
+                </span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -418,7 +532,9 @@ export default function EditArticlePage() {
                   onChange={(e) => set('trending', e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Mark as trending</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Mark as trending
+                </span>
               </label>
             </div>
           </div>
@@ -426,53 +542,60 @@ export default function EditArticlePage() {
           {/* Author */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Author</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid lg:grid-cols-[1fr_280px] gap-4">
               <div>
-                <label className={labelCls}>Author Name <span className="text-red-500">*</span></label>
-                <input
+                <label className={labelCls}>
+                  Select Author <span className="text-red-500">*</span>
+                </label>
+                <select
                   required
-                  type="text"
-                  value={form.author}
-                  onChange={(e) => set('author', e.target.value)}
+                  value={form.authorSlug}
+                  onChange={(e) => handleAuthorChange(e.target.value)}
                   className={inputCls}
-                />
+                >
+                  {authorOptions.map((author) => (
+                    <option key={author.slug} value={author.slug}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-400">
+                  Manage names, bios, and profile photos from the Authors screen.
+                </p>
+                <Link
+                  href="/admin/authors"
+                  className="mt-2 inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Manage authors
+                </Link>
               </div>
-              <div>
-                <label className={labelCls}>Avatar URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.authorAvatar}
-                    onChange={(e) => set('authorAvatar', e.target.value)}
-                    placeholder="https://... or pick from library"
-                    className={`${inputCls} flex-1`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => openMediaPicker('author')}
-                    title="Pick from Media Library"
-                    className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors flex-shrink-0"
-                  >
-                    <PhotoIcon className="w-4 h-4" />
-                  </button>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 flex gap-3">
+                <img
+                  src={form.authorAvatar || '/assets/images/app_logo.png'}
+                  alt={form.author}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {form.author}
+                  </p>
+                  <p className="text-xs text-gray-400 font-mono truncate">@{form.authorSlug}</p>
+                  {form.authorBio && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {form.authorBio}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
-            <div>
-              <label className={labelCls}>Author Bio</label>
-              <textarea
-                rows={2}
-                value={form.authorBio}
-                onChange={(e) => set('authorBio', e.target.value)}
-                className={`${inputCls} resize-none`}
-              />
             </div>
           </div>
 
           {/* Cover Image */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Image</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Cover Image
+              </h3>
               <button
                 type="button"
                 onClick={() => openMediaPicker('cover')}
@@ -484,7 +607,9 @@ export default function EditArticlePage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>Image URL <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  Image URL <span className="text-red-500">*</span>
+                </label>
                 <input
                   required
                   type="url"
@@ -495,7 +620,9 @@ export default function EditArticlePage() {
                 />
               </div>
               <div>
-                <label className={labelCls}>Alt Text <span className="text-red-500">*</span></label>
+                <label className={labelCls}>
+                  Alt Text <span className="text-red-500">*</span>
+                </label>
                 <input
                   required
                   type="text"
@@ -507,7 +634,9 @@ export default function EditArticlePage() {
               </div>
             </div>
             <div>
-              <label className={labelCls}>Caption <span className="text-xs text-gray-400 font-normal">(optional)</span></label>
+              <label className={labelCls}>
+                Caption <span className="text-xs text-gray-400 font-normal">(optional)</span>
+              </label>
               <input
                 type="text"
                 value={form.imageCaption}
@@ -522,7 +651,9 @@ export default function EditArticlePage() {
                   src={form.image}
                   alt={form.imageAlt}
                   className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
                 <button
                   type="button"
@@ -538,7 +669,9 @@ export default function EditArticlePage() {
           {/* Article Content */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
             <div className="px-5 pt-4 pb-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Article Content</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Article Content
+              </h3>
               <button
                 type="button"
                 onClick={() => openMediaPicker('content')}
@@ -560,7 +693,9 @@ export default function EditArticlePage() {
               rows={20}
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
-              placeholder={'<p>Start writing your article...</p>\n\n<h2>Section Heading</h2>\n<p>Your content goes here.</p>'}
+              placeholder={
+                '<p>Start writing your article...</p>\n\n<h2>Section Heading</h2>\n<p>Your content goes here.</p>'
+              }
               className="w-full px-4 py-3 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none font-mono resize-y border-0 rounded-b-xl"
             />
           </div>
@@ -576,17 +711,20 @@ export default function EditArticlePage() {
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 SEO & Social
               </div>
-              {seoOpen
-                ? <ChevronUpIcon className="w-4 h-4 text-gray-400" />
-                : <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-              }
+              {seoOpen ? (
+                <ChevronUpIcon className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              )}
             </button>
             {seoOpen && (
               <div className="px-5 pb-5 space-y-4 border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div>
                   <label className={labelCls}>
                     Meta Title
-                    <span className="ml-2 text-xs font-normal text-gray-400">{form.metaTitle.length}/60 chars</span>
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                      {form.metaTitle.length}/60 chars
+                    </span>
                   </label>
                   <input
                     type="text"
@@ -600,7 +738,9 @@ export default function EditArticlePage() {
                 <div>
                   <label className={labelCls}>
                     Meta Description
-                    <span className="ml-2 text-xs font-normal text-gray-400">{form.metaDescription.length}/160 chars</span>
+                    <span className="ml-2 text-xs font-normal text-gray-400">
+                      {form.metaDescription.length}/160 chars
+                    </span>
                   </label>
                   <textarea
                     rows={3}
@@ -644,11 +784,15 @@ export default function EditArticlePage() {
                 </div>
                 {(form.metaTitle || form.title) && (
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Google Preview</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      Google Preview
+                    </p>
                     <p className="text-blue-700 dark:text-blue-400 text-sm font-medium line-clamp-1">
                       {form.metaTitle || form.title}
                     </p>
-                    <p className="text-green-700 dark:text-green-500 text-xs mt-0.5">dailybytenews.in › article</p>
+                    <p className="text-green-700 dark:text-green-500 text-xs mt-0.5">
+                      dailybytenews.in › article
+                    </p>
                     <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 line-clamp-2">
                       {form.metaDescription || form.excerpt || 'Meta description will appear here.'}
                     </p>
@@ -672,8 +816,15 @@ export default function EditArticlePage() {
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
             >
               {saved ? (
-                <><CheckIcon className="w-4 h-4" />Saved!</>
-              ) : saving ? 'Saving...' : 'Save Changes'}
+                <>
+                  <CheckIcon className="w-4 h-4" />
+                  Saved!
+                </>
+              ) : saving ? (
+                'Saving...'
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </div>
         </form>

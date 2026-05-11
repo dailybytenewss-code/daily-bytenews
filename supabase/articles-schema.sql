@@ -79,6 +79,135 @@ to authenticated
 using (true)
 with check (true);
 
+-- Managed author profiles for article dropdowns
+create table if not exists public.authors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  bio text not null default '',
+  avatar_url text not null default '/assets/images/app_logo.png',
+  role text,
+  email text,
+  status text not null default 'active'
+    check (status in ('active', 'inactive')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists authors_status_idx
+  on public.authors (status);
+
+drop trigger if exists set_authors_updated_at on public.authors;
+create trigger set_authors_updated_at
+before update on public.authors
+for each row
+execute function public.set_updated_at();
+
+alter table public.authors enable row level security;
+
+drop policy if exists "Public can read active authors" on public.authors;
+create policy "Public can read active authors"
+on public.authors
+for select
+to anon, authenticated
+using (status = 'active');
+
+drop policy if exists "Authenticated admins can manage authors" on public.authors;
+create policy "Authenticated admins can manage authors"
+on public.authors
+for all
+to authenticated
+using (true)
+with check (true);
+
+insert into public.authors (name, slug, bio, avatar_url, role, status)
+values (
+  'DailyByteNews',
+  'dailybytenews',
+  'Covering the latest in AI, technology, and business - built for the modern Indian tech reader.',
+  '/assets/images/app_logo.png',
+  'Editorial Desk',
+  'active'
+) on conflict (slug) do nothing;
+
+-- Managed categories for article dropdowns and category pages
+create table if not exists public.article_categories (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  description text not null default '',
+  color text not null default 'blue'
+    check (color in ('blue', 'amber', 'red', 'green')),
+  status text not null default 'active'
+    check (status in ('active', 'inactive')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists article_categories_status_idx
+  on public.article_categories (status);
+
+drop trigger if exists set_article_categories_updated_at on public.article_categories;
+create trigger set_article_categories_updated_at
+before update on public.article_categories
+for each row
+execute function public.set_updated_at();
+
+alter table public.article_categories enable row level security;
+
+drop policy if exists "Public can read active categories" on public.article_categories;
+create policy "Public can read active categories"
+on public.article_categories
+for select
+to anon, authenticated
+using (status = 'active');
+
+drop policy if exists "Authenticated admins can manage categories" on public.article_categories;
+create policy "Authenticated admins can manage categories"
+on public.article_categories
+for all
+to authenticated
+using (true)
+with check (true);
+
+insert into public.article_categories (name, slug, description, color, status) values
+  (
+    'AI & Tech',
+    'ai-tech',
+    'Artificial intelligence, machine learning, developer tools, and the technology shaping tomorrow.',
+    'blue',
+    'active'
+  ),
+  (
+    'Business & Markets',
+    'business',
+    'Startup funding, IPOs, market moves, and the business side of the tech industry.',
+    'green',
+    'active'
+  ),
+  (
+    'Trending',
+    'trending',
+    'The stories everyone is talking about - viral, impactful, and worth your attention.',
+    'amber',
+    'active'
+  ),
+  (
+    'Explainers',
+    'explainers',
+    'Clear context, helpful breakdowns, and practical explainers for fast-moving stories.',
+    'blue',
+    'active'
+  ),
+  (
+    'Opinion',
+    'opinion',
+    'Editorial analysis and informed viewpoints from the DailyByteNews team.',
+    'amber',
+    'active'
+  )
+on conflict (slug) do nothing;
+
 -- Subscribers table for newsletter
 create table if not exists public.subscribers (
   id uuid primary key default gen_random_uuid(),
@@ -133,6 +262,40 @@ with check (true);
 drop policy if exists "Authenticated admins can manage subscribers" on public.subscribers;
 create policy "Authenticated admins can manage subscribers"
 on public.subscribers
+for all
+to authenticated
+using (true)
+with check (true);
+
+-- Newsletter campaign history
+create table if not exists public.newsletter_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  subject text not null,
+  preview text,
+  body text not null,
+  status text not null default 'sent'
+    check (status in ('sent', 'failed')),
+  recipient_count integer not null default 0,
+  failure_reason text,
+  sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists newsletter_campaigns_created_at_idx
+  on public.newsletter_campaigns (created_at desc);
+
+drop trigger if exists set_newsletter_campaigns_updated_at on public.newsletter_campaigns;
+create trigger set_newsletter_campaigns_updated_at
+before update on public.newsletter_campaigns
+for each row
+execute function public.set_updated_at();
+
+alter table public.newsletter_campaigns enable row level security;
+
+drop policy if exists "Authenticated admins can manage campaigns" on public.newsletter_campaigns;
+create policy "Authenticated admins can manage campaigns"
+on public.newsletter_campaigns
 for all
 to authenticated
 using (true)

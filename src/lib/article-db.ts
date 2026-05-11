@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Article } from '@/lib/articles';
+import { categories as fallbackCategories } from '@/lib/articles';
 import { rowToArticle, type ArticleRow } from '@/lib/article-shared';
+import type { AdminCategory, AuthorProfile } from '@/lib/admin-taxonomy';
+import { DEFAULT_AUTHOR } from '@/lib/admin-taxonomy';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,6 +45,59 @@ async function fetchArticleRows(includeDrafts = false): Promise<ArticleRow[]> {
 export async function getArticles(includeDrafts = false): Promise<Article[]> {
   const rows = await fetchArticleRows(includeDrafts);
   return rows.map(rowToArticle);
+}
+
+export async function getArticleCategories(includeInactive = false): Promise<AdminCategory[]> {
+  try {
+    const supabase = includeInactive ? await createClient() : createPublicReadClient();
+    let query = supabase.from('article_categories').select('*').order('name');
+
+    if (!includeInactive) {
+      query = query.eq('status', 'active');
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Supabase article_categories read failed:', error.message);
+      return fallbackCategories.map((category, index) => ({
+        id: `fallback-${index}`,
+        ...category,
+        status: 'active' as const,
+      }));
+    }
+
+    return (data ?? []) as AdminCategory[];
+  } catch (error) {
+    console.error('Supabase article_categories read failed:', error);
+    return fallbackCategories.map((category, index) => ({
+      id: `fallback-${index}`,
+      ...category,
+      status: 'active' as const,
+    }));
+  }
+}
+
+export async function getAuthorProfiles(includeInactive = false): Promise<AuthorProfile[]> {
+  try {
+    const supabase = includeInactive ? await createClient() : createPublicReadClient();
+    let query = supabase.from('authors').select('*').order('name');
+
+    if (!includeInactive) {
+      query = query.eq('status', 'active');
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Supabase authors read failed:', error.message);
+      return [DEFAULT_AUTHOR];
+    }
+
+    const authors = (data ?? []) as AuthorProfile[];
+    return authors.length > 0 ? authors : [DEFAULT_AUTHOR];
+  } catch (error) {
+    console.error('Supabase authors read failed:', error);
+    return [DEFAULT_AUTHOR];
+  }
 }
 
 // ─── TODAY'S articles — for "Latest Stories" on homepage ────────

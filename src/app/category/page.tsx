@@ -3,8 +3,7 @@ import type { Metadata } from 'next';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CategoryPageContent from './components/CategoryPageContent';
-import { categories } from '@/lib/articles';
-import { getArticles, getTrendingArticles } from '@/lib/article-db';
+import { getArticleCategories, getArticles, getTrendingArticles } from '@/lib/article-db';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,11 +20,12 @@ interface CategoryPageProps {
 export default async function CategoryPage({ searchParams }: CategoryPageProps) {
   const { cat } = await searchParams;
   const catSlug = cat || 'ai-tech';
-  const category = categories.find((c) => c.slug === catSlug) || categories[0];
-  const [articles, trendingArticles] = await Promise.all([
+  const [categories, articles, trendingArticles] = await Promise.all([
+    getArticleCategories(),
     getArticles(false),
     getTrendingArticles(),
   ]);
+  const category = categories.find((c) => c.slug === catSlug) || categories[0];
 
   return (
     <div className="min-h-screen bg-background">

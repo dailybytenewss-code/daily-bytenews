@@ -1,11 +1,17 @@
-'use client';
+﻿'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaPicker from '@/components/admin/MediaPicker';
 import RichTextToolbar from '@/components/admin/RichTextToolbar';
 import { createClient } from '@/lib/supabase/client';
+import {
+  DEFAULT_AUTHOR,
+  DEFAULT_CATEGORIES,
+  type AdminCategory,
+  type AuthorProfile,
+} from '@/lib/admin-taxonomy';
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -13,14 +19,6 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from '@heroicons/react/24/outline';
-
-const CATEGORIES = [
-  { label: 'AI & Tech', slug: 'ai-tech', color: 'blue' },
-  { label: 'Business & Markets', slug: 'business', color: 'green' },
-  { label: 'Trending', slug: 'trending', color: 'amber' },
-  { label: 'Explainers', slug: 'explainers', color: 'blue' },
-  { label: 'Opinion', slug: 'opinion', color: 'amber' },
-];
 
 type Status = 'draft' | 'published' | 'scheduled';
 
@@ -41,6 +39,9 @@ export default function NewArticlePage() {
   const [seoOpen, setSeoOpen] = useState(false);
   const [status, setStatus] = useState<Status>('published');
   const [error, setError] = useState('');
+  const [directoryWarning, setDirectoryWarning] = useState('');
+  const [authors, setAuthors] = useState<AuthorProfile[]>([DEFAULT_AUTHOR]);
+  const [categories, setCategories] = useState<AdminCategory[]>(DEFAULT_CATEGORIES);
 
   const [form, setForm] = useState({
     title: '',
@@ -49,10 +50,10 @@ export default function NewArticlePage() {
     category: 'AI & Tech',
     categorySlug: 'ai-tech',
     categoryColor: 'blue',
-    author: 'DailyByteNews',
-    authorBio:
-      'Covering the latest in AI, technology, and business — built for the modern Indian tech reader.',
-    authorAvatar: '/assets/images/app_logo.png',
+    author: DEFAULT_AUTHOR.name,
+    authorSlug: DEFAULT_AUTHOR.slug,
+    authorBio: DEFAULT_AUTHOR.bio,
+    authorAvatar: DEFAULT_AUTHOR.avatar_url,
     date: new Date().toISOString().split('T')[0],
     scheduledAt: '',
     readTime: '5 min read',
@@ -73,6 +74,67 @@ export default function NewArticlePage() {
   const set = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDirectory() {
+      const supabase = createClient();
+      const [
+        { data: authorRows, error: authorError },
+        { data: categoryRows, error: categoryError },
+      ] = await Promise.all([
+        supabase.from('authors').select('*').eq('status', 'active').order('name'),
+        supabase.from('article_categories').select('*').eq('status', 'active').order('name'),
+      ]);
+
+      if (!mounted) return;
+
+      if (!authorError && authorRows && authorRows.length > 0) {
+        const nextAuthors = authorRows as AuthorProfile[];
+        setAuthors(nextAuthors);
+        const first = nextAuthors[0];
+        setForm((prev) =>
+          prev.author === DEFAULT_AUTHOR.name
+            ? {
+                ...prev,
+                author: first.name,
+                authorSlug: first.slug,
+                authorBio: first.bio,
+                authorAvatar: first.avatar_url,
+              }
+            : prev
+        );
+      }
+
+      if (!categoryError && categoryRows && categoryRows.length > 0) {
+        const nextCategories = categoryRows as AdminCategory[];
+        setCategories(nextCategories);
+        const first = nextCategories[0];
+        setForm((prev) =>
+          prev.categorySlug === 'ai-tech'
+            ? {
+                ...prev,
+                category: first.name,
+                categorySlug: first.slug,
+                categoryColor: first.color,
+              }
+            : prev
+        );
+      }
+
+      if (authorError || categoryError) {
+        setDirectoryWarning(
+          'Using default author/category choices. Run the updated Supabase schema to enable managed dropdowns.'
+        );
+      }
+    }
+
+    loadDirectory();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleTitleChange = (value: string) => {
     setForm((prev) => ({
       ...prev,
@@ -83,12 +145,23 @@ export default function NewArticlePage() {
   };
 
   const handleCategoryChange = (label: string) => {
-    const cat = CATEGORIES.find((c) => c.label === label)!;
+    const cat = categories.find((c) => c.name === label)!;
     setForm((prev) => ({
       ...prev,
-      category: cat.label,
+      category: cat.name,
       categorySlug: cat.slug,
       categoryColor: cat.color,
+    }));
+  };
+
+  const handleAuthorChange = (slug: string) => {
+    const author = authors.find((a) => a.slug === slug) || DEFAULT_AUTHOR;
+    setForm((prev) => ({
+      ...prev,
+      author: author.name,
+      authorSlug: author.slug,
+      authorBio: author.bio,
+      authorAvatar: author.avatar_url,
     }));
   };
 
@@ -129,7 +202,7 @@ export default function NewArticlePage() {
       category_slug: form.categorySlug,
       category_color: form.categoryColor,
       author: form.author || 'DailyByteNews',
-      author_slug: slugify(form.author || 'dailybytenews'),
+      author_slug: form.authorSlug || slugify(form.author || 'dailybytenews'),
       author_avatar: form.authorAvatar || '/assets/images/app_logo.png',
       author_bio: form.authorBio,
       published_at: form.date,
@@ -242,6 +315,12 @@ export default function NewArticlePage() {
           </div>
         )}
 
+        {directoryWarning && (
+          <div className="mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            {directoryWarning}
+          </div>
+        )}
+
         <form id="article-form" onSubmit={handleSubmit} className="space-y-5">
           {/* Title & Slug */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
@@ -304,8 +383,8 @@ export default function NewArticlePage() {
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   className={inputCls}
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.slug}>{c.label}</option>
+                  {categories.map((c) => (
+                    <option key={c.slug}>{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -382,49 +461,51 @@ export default function NewArticlePage() {
           {/* Author */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 space-y-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Author</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid lg:grid-cols-[1fr_280px] gap-4">
               <div>
                 <label className={labelCls}>
-                  Author Name <span className="text-red-500">*</span>
+                  Select Author <span className="text-red-500">*</span>
                 </label>
-                <input
+                <select
                   required
-                  type="text"
-                  value={form.author}
-                  onChange={(e) => set('author', e.target.value)}
-                  placeholder="Ananya Krishnan"
+                  value={form.authorSlug}
+                  onChange={(e) => handleAuthorChange(e.target.value)}
                   className={inputCls}
-                />
+                >
+                  {authors.map((author) => (
+                    <option key={author.slug} value={author.slug}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-400">
+                  Manage names, bios, and profile photos from the Authors screen.
+                </p>
+                <Link
+                  href="/admin/authors"
+                  className="mt-2 inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Manage authors
+                </Link>
               </div>
-              <div>
-                <label className={labelCls}>Avatar URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={form.authorAvatar}
-                    onChange={(e) => set('authorAvatar', e.target.value)}
-                    placeholder="https://..."
-                    className={`${inputCls} flex-1`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => openMediaPicker('author')}
-                    className="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-400 transition-colors flex-shrink-0"
-                  >
-                    <PhotoIcon className="w-4 h-4" />
-                  </button>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 flex gap-3">
+                <img
+                  src={form.authorAvatar || '/assets/images/app_logo.png'}
+                  alt={form.author}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {form.author}
+                  </p>
+                  <p className="text-xs text-gray-400 font-mono truncate">@{form.authorSlug}</p>
+                  {form.authorBio && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {form.authorBio}
+                    </p>
+                  )}
                 </div>
               </div>
-            </div>
-            <div>
-              <label className={labelCls}>Author Bio</label>
-              <textarea
-                rows={2}
-                value={form.authorBio}
-                onChange={(e) => set('authorBio', e.target.value)}
-                placeholder="Senior tech journalist covering AI and startups..."
-                className={`${inputCls} resize-none`}
-              />
             </div>
           </div>
 
@@ -498,7 +579,7 @@ export default function NewArticlePage() {
                   onClick={() => set('image', '')}
                   className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors"
                 >
-                  <span className="text-xs">✕</span>
+                  <span className="text-xs">âœ•</span>
                 </button>
               </div>
             )}
@@ -622,7 +703,7 @@ export default function NewArticlePage() {
                       {form.metaTitle || form.title || 'Article Title'}
                     </p>
                     <p className="text-green-700 dark:text-green-500 text-xs mt-0.5">
-                      dailybytenews.in › article
+                      dailybytenews.in â€º article
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 line-clamp-2">
                       {form.metaDescription || form.excerpt || 'Meta description will appear here.'}
@@ -639,7 +720,7 @@ export default function NewArticlePage() {
               href="/admin/articles"
               className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
-              ← Back to Articles
+              â† Back to Articles
             </Link>
             <div className="flex items-center gap-3">
               <button

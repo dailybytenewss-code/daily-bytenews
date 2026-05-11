@@ -2,15 +2,13 @@
 
 import { useState } from 'react';
 import {
-  EnvelopeIcon,
   PaperAirplaneIcon,
   UserGroupIcon,
   TrashIcon,
   MagnifyingGlassIcon,
   CheckIcon,
 } from '@heroicons/react/24/outline';
-import { createClient } from '@/lib/supabase/client';
-import { deleteSubscriber } from '@/lib/subscriber-db-server';
+import { deleteSubscriber, sendNewsletterCampaign } from '@/lib/subscriber-db-server';
 import type { Subscriber } from '@/lib/subscriber-db-server';
 
 interface NewsletterAdminProps {
@@ -27,11 +25,10 @@ export default function NewsletterAdmin({ initialSubscribers }: NewsletterAdminP
   const [compose, setCompose] = useState({ subject: '', preview: '', body: '' });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sendMessage, setSendMessage] = useState('');
 
   const active = subscribers.filter((s) => s.status === 'active').length;
-  const filtered = subscribers.filter((s) =>
-    s.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = subscribers.filter((s) => s.email.toLowerCase().includes(search.toLowerCase()));
 
   const handleDelete = async (id: string, email: string) => {
     if (confirm(`Remove ${email}? This cannot be undone.`)) {
@@ -49,15 +46,26 @@ export default function NewsletterAdmin({ initialSubscribers }: NewsletterAdminP
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setSendMessage('');
     setSending(true);
 
-    // In production, you'd send emails via a service like SendGrid, Resend, or Mailgun
-    // For now, this is just a placeholder
-    await new Promise((r) => setTimeout(r, 1200));
+    const result = await sendNewsletterCampaign(compose);
 
     setSending(false);
+
+    if (!result.success) {
+      setError(result.message);
+      return;
+    }
+
+    setSendMessage(result.message);
     setSent(true);
-    setTimeout(() => setSent(false), 3000);
+    setCompose({ subject: '', preview: '', body: '' });
+    setTimeout(() => {
+      setSent(false);
+      setSendMessage('');
+    }, 4000);
   };
 
   return (
@@ -214,9 +222,7 @@ export default function NewsletterAdmin({ initialSubscribers }: NewsletterAdminP
             <p className="text-xs text-gray-400">
               Showing {filtered.length} of {subscribers.length} subscribers
             </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              {active} active subscribers
-            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">{active} active subscribers</p>
           </div>
         </div>
       ) : (
@@ -228,7 +234,7 @@ export default function NewsletterAdmin({ initialSubscribers }: NewsletterAdminP
               </div>
               <p className="font-bold text-gray-900 dark:text-white">Campaign sent!</p>
               <p className="text-sm text-gray-400 mt-1">
-                Delivered to {active} active subscribers.
+                {sendMessage || `Delivered to ${active} active subscribers.`}
               </p>
             </div>
           ) : (
@@ -276,11 +282,14 @@ export default function NewsletterAdmin({ initialSubscribers }: NewsletterAdminP
               </div>
               <div className="flex items-center justify-between pt-2">
                 <p className="text-xs text-gray-400">
-                  Will be sent to <strong className="text-gray-700 dark:text-gray-300">{active} active subscribers</strong>
+                  Will be sent to{' '}
+                  <strong className="text-gray-700 dark:text-gray-300">
+                    {active} active subscribers
+                  </strong>
                 </p>
                 <button
                   type="submit"
-                  disabled={sending}
+                  disabled={sending || active === 0}
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold rounded-lg transition-colors"
                 >
                   <PaperAirplaneIcon className="w-4 h-4" />
