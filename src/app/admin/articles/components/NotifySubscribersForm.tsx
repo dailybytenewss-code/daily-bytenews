@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { sendArticleNotification } from '@/lib/subscriber-db-server';
-import { CheckCircleIcon, ExclamationIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface NotifySubscribersFormProps {
   articleTitle: string;
@@ -99,7 +99,7 @@ export default function NotifySubscribersForm({
 
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 flex items-start gap-2">
-          <ExclamationIcon className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <ExclamationTriangleIcon className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
