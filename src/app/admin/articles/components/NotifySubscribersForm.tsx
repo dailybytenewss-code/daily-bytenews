@@ -19,6 +19,7 @@ export default function NotifySubscribersForm({
   const [customMessage, setCustomMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
   const [error, setError] = useState('');
 
   const defaultMessage = `${articleTitle} - Check it out now: https://www.dailybytenews.in/article?slug=${articleSlug}`;
@@ -38,6 +39,7 @@ export default function NotifySubscribersForm({
 
     if (result.success) {
       setSuccess(true);
+      setSentCount(result.sentCount);
       setCustomMessage('');
       setTimeout(() => {
         setSuccess(false);
@@ -56,7 +58,7 @@ export default function NotifySubscribersForm({
         <div>
           <p className="font-semibold text-green-900 dark:text-green-200">Newsletter sent!</p>
           <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-            Sent to {result.sentCount} subscribers.
+            Sent to {sentCount} subscribers.
           </p>
         </div>
       </div>
